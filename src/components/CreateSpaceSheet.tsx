@@ -23,15 +23,18 @@ export default function CreateSpaceSheet({
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
 
   const handleCreate = async () => {
     setLoading(true);
     setError(null);
+    setLimitReached(false);
     const result = await createUserSpace(ownerId, name, description, lat, lng);
     setLoading(false);
     if (result.success) {
       onCreated();
     } else {
+      if (result.limitReached) setLimitReached(true);
       setError(result.error ?? "오류가 발생했습니다.");
     }
   };
@@ -107,19 +110,26 @@ export default function CreateSpaceSheet({
         <p className="text-xs mb-3 text-center" style={{ color: "#EF4444" }}>{error}</p>
       )}
 
-      <button
-        onClick={handleCreate}
-        disabled={loading || !name.trim()}
-        className="w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity"
-        style={{
-          background: name.trim() ? "#A78BFA" : "rgba(167,139,250,0.3)",
-          color: "white",
-          opacity: loading ? 0.7 : 1,
-        }}
-      >
-        {loading ? <Loader2 size={16} className="animate-spin" /> : null}
-        {loading ? "생성 중..." : "공간 생성하기"}
-      </button>
+      {limitReached ? (
+        <div className="w-full py-4 rounded-2xl text-sm text-center"
+          style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.3)", color: "#A78BFA" }}>
+          ✨ 프리미엄으로 추가 공간 생성 가능 (준비 중)
+        </div>
+      ) : (
+        <button
+          onClick={handleCreate}
+          disabled={loading || !name.trim()}
+          className="w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-opacity"
+          style={{
+            background: name.trim() ? "#A78BFA" : "rgba(167,139,250,0.3)",
+            color: "white",
+            opacity: loading ? 0.7 : 1,
+          }}
+        >
+          {loading ? <Loader2 size={16} className="animate-spin" /> : null}
+          {loading ? "생성 중..." : "공간 생성하기"}
+        </button>
+      )}
     </div>
   );
 }

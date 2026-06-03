@@ -2,18 +2,18 @@
 
 import { Compass, Star, Users, MoreHorizontal } from "lucide-react";
 
-type Tab = "explore" | "myspace" | "gwandang" | "more";
+export type BottomTab = "explore" | "myspace" | "gwandang" | "more";
 
 interface BottomNavProps {
-  activeTab: Tab;
-  onTabChange: (tab: Tab) => void;
+  activeTab: string;
+  onTabChange: (tab: BottomTab) => void;
 }
 
 const TABS = [
-  { id: "explore" as Tab, label: "탐험", Icon: Compass },
-  { id: "myspace" as Tab, label: "마이스페이스", Icon: Star },
-  { id: "gwandang" as Tab, label: "괸당", Icon: Users },
-  { id: "more" as Tab, label: "더보기", Icon: MoreHorizontal },
+  { id: "explore" as BottomTab, label: "탐험", Icon: Compass },
+  { id: "myspace" as BottomTab, label: "마이스페이스", Icon: Star },
+  { id: "gwandang" as BottomTab, label: "괸당", Icon: Users },
+  { id: "more" as BottomTab, label: "더보기", Icon: MoreHorizontal },
 ];
 
 export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {

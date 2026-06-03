@@ -18,6 +18,10 @@ import EventAlert from "@/components/EventAlert";
 import DiscoveryReward from "@/components/DiscoveryReward";
 import HallOfFame from "@/components/HallOfFame";
 import OwnerUpgradeSheet from "@/components/OwnerUpgradeSheet";
+import SearchSheet from "@/components/SearchSheet";
+import CCTVSheet from "@/components/CCTVSheet";
+import BusinessPortal from "@/components/BusinessPortal";
+import TripPlanTab from "@/components/TripPlanTab";
 import { useEventProximity } from "@/hooks/useEventProximity";
 import { useWarp } from "@/hooks/useWarp";
 import { useAuth } from "@/hooks/useAuth";
@@ -73,7 +77,7 @@ const MOCK_SPACES: Space[] = [
   },
 ];
 
-type Tab = "explore" | "myspace" | "gwandang" | "more";
+type Tab = "explore" | "myspace" | "gwandang" | "more" | "tripplan" | "business";
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -90,6 +94,8 @@ export default function Home() {
   const [reward, setReward] = useState<{ badge: string; points: number; eventName: string } | null>(null);
   const [showHallOfFame, setShowHallOfFame] = useState(false);
   const [showOwnerUpgrade, setShowOwnerUpgrade] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showCCTV, setShowCCTV] = useState(false);
   const [mapZoom, setMapZoom] = useState(9.5);
   const [notifications, setNotifications] = useState<{ id: string; message: string }[]>([]);
 
@@ -207,7 +213,12 @@ export default function Home() {
       <Map spaces={filteredSpaces} onSpaceClick={setSelectedSpace} onMapLoad={handleMapLoad} sentinelVisible={sentinelVisible} />
       <DirectionHUD map={mapInstance} spaces={filteredSpaces} userLocation={userLocation} />
 
-      <TopBar nickname={user?.nickname} />
+      <TopBar
+        nickname={user?.nickname}
+        onSearchOpen={() => setShowSearch(true)}
+        onCCTVOpen={() => setShowCCTV(true)}
+        notificationCount={notifications.length}
+      />
 
       <LayerToggle
         onLocate={handleLocate}
@@ -271,6 +282,30 @@ export default function Home() {
         />
       )}
 
+      {/* 여행 일정 탭 */}
+      {activeTab === "tripplan" && user && (
+        <div className="absolute inset-0 z-20 flex flex-col"
+          style={{ background: "rgba(5,8,20,0.97)", backdropFilter: "blur(20px)" }}>
+          <div className="flex items-center px-5 pt-14 pb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            <h2 className="text-white font-bold text-xl flex-1">여행 일정</h2>
+            <button onClick={() => setActiveTab("explore")} className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>닫기</button>
+          </div>
+          <TripPlanTab uid={user.uid} nickname={user.nickname} />
+        </div>
+      )}
+
+      {/* 비즈니스 포털 탭 */}
+      {activeTab === "business" && user && (
+        <div className="absolute inset-0 z-20 flex flex-col"
+          style={{ background: "rgba(5,8,20,0.97)", backdropFilter: "blur(20px)" }}>
+          <div className="flex items-center px-5 pt-14 pb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            <h2 className="text-white font-bold text-xl flex-1">비즈니스 포털</h2>
+            <button onClick={() => setActiveTab("explore")} className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>닫기</button>
+          </div>
+          <BusinessPortal uid={user.uid} />
+        </div>
+      )}
+
       {/* 마이스페이스 탭 */}
       {activeTab === "myspace" && user && (
         <div className="absolute inset-0 z-20 flex flex-col"
@@ -325,9 +360,60 @@ export default function Home() {
                 </div>
               </button>
             )}
+
+            <button onClick={() => setActiveTab("tripplan" as Tab)}
+              className="flex items-center gap-3 px-4 py-4 rounded-2xl w-full text-left"
+              style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.15)" }}>
+              <span className="text-2xl">🗓️</span>
+              <div>
+                <p className="text-white font-semibold text-sm">여행 일정 만들기</p>
+                <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>AI로 최적 동선 생성</p>
+              </div>
+            </button>
+
+            <button onClick={() => setActiveTab("business" as Tab)}
+              className="flex items-center gap-3 px-4 py-4 rounded-2xl w-full text-left"
+              style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.15)" }}>
+              <span className="text-2xl">🍊</span>
+              <div>
+                <p className="text-white font-semibold text-sm">비즈니스 포털</p>
+                <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>제주 상권을 FunJeju에 연결</p>
+              </div>
+            </button>
+
+            {user && (
+              <button onClick={async () => {
+                const idToken = await import("firebase/auth").then(m => m.getAuth().currentUser?.getIdToken());
+                if (!idToken) return;
+                const res = await fetch("/api/export-data", { headers: { Authorization: `Bearer ${idToken}` } });
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a"); a.href = url; a.download = "funeju-data.json"; a.click();
+              }}
+                className="flex items-center gap-3 px-4 py-4 rounded-2xl w-full text-left"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <span className="text-2xl">📦</span>
+                <div>
+                  <p className="text-white font-semibold text-sm">내 데이터 내보내기</p>
+                  <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>기록·공간·컬렉션 JSON 다운로드</p>
+                </div>
+              </button>
+            )}
           </div>
         </div>
       )}
+
+      {/* 검색 */}
+      {showSearch && (
+        <SearchSheet
+          spaces={spaces}
+          onSelectSpace={(space) => { setSelectedSpace(space); setShowSearch(false); }}
+          onClose={() => setShowSearch(false)}
+        />
+      )}
+
+      {/* CCTV */}
+      {showCCTV && <CCTVSheet onClose={() => setShowCCTV(false)} />}
 
       {/* 오너 업그레이드 */}
       {showOwnerUpgrade && user && (

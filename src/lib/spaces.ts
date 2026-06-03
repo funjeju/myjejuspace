@@ -90,14 +90,30 @@ async function isTooClose(lat: number, lng: number): Promise<boolean> {
   return false;
 }
 
+// F-401: 유저당 보유 공간 수 확인
+export async function getUserSpaceCount(ownerId: string): Promise<number> {
+  const q = query(collection(db, "spaces"), where("ownerId", "==", ownerId), where("type", "==", "user"), where("active", "==", true));
+  const snap = await getDocs(q);
+  return snap.size;
+}
+
 export async function createUserSpace(
   ownerId: string,
   name: string,
   description: string,
   lat: number,
-  lng: number
-): Promise<{ success: boolean; error?: string; space?: Space }> {
+  lng: number,
+  isPremium = false
+): Promise<{ success: boolean; error?: string; space?: Space; limitReached?: boolean }> {
   if (!name.trim()) return { success: false, error: "공간 이름을 입력해주세요." };
+
+  // F-401: 무료 플랜 1개 제한
+  if (!isPremium) {
+    const count = await getUserSpaceCount(ownerId);
+    if (count >= 1) {
+      return { success: false, error: "무료 플랜은 공간 1개까지 생성 가능합니다.", limitReached: true };
+    }
+  }
 
   const tooClose = await isTooClose(lat, lng);
   if (tooClose) {
