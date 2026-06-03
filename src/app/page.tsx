@@ -7,6 +7,7 @@ import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import LayerToggle from "@/components/LayerToggle";
 import LoginScreen from "@/components/LoginScreen";
+import LoginBanner from "@/components/LoginBanner";
 import CreateSpaceSheet from "@/components/CreateSpaceSheet";
 import DirectionHUD from "@/components/DirectionHUD";
 import SpaceDetailSheet from "@/components/SpaceDetailSheet";
@@ -92,6 +93,7 @@ export default function Home() {
   const [recordSpace, setRecordSpace] = useState<Space | null>(null);
   const [dismissedEvents, setDismissedEvents] = useState<Set<string>>(new Set());
   const [reward, setReward] = useState<{ badge: string; points: number; eventName: string } | null>(null);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showHallOfFame, setShowHallOfFame] = useState(false);
   const [showOwnerUpgrade, setShowOwnerUpgrade] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -137,7 +139,9 @@ export default function Home() {
 
     const onPressStart = (e: mapboxgl.MapMouseEvent | mapboxgl.MapTouchEvent) => {
       pressTimer = setTimeout(() => {
+        if (!mapRef.current) return;
         const { lng, lat } = e.lngLat;
+        if (!user) { setShowLoginPopup(true); return; }
         setCreateCoords({ lat, lng });
         setSelectedSpace(null);
       }, 700);
@@ -209,7 +213,7 @@ export default function Home() {
 
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-black">
-      {!user && <LoginScreen onLogin={() => {}} />}
+      {!user && <LoginBanner />}
       <Map spaces={filteredSpaces} onSpaceClick={setSelectedSpace} onMapLoad={handleMapLoad} sentinelVisible={sentinelVisible} />
       <DirectionHUD map={mapInstance} spaces={filteredSpaces} userLocation={userLocation} />
 
@@ -235,7 +239,10 @@ export default function Home() {
           space={selectedSpace}
           onClose={() => setSelectedSpace(null)}
           onWarp={handleWarp}
-          onRecord={(space) => { setRecordSpace(space); setSelectedSpace(null); }}
+          onRecord={(space) => {
+            if (!user) { setShowLoginPopup(true); return; }
+            setRecordSpace(space); setSelectedSpace(null);
+          }}
           currentUser={user}
         />
       )}
@@ -403,6 +410,26 @@ export default function Home() {
         </div>
       )}
 
+      {/* 로그인 팝업 */}
+      {showLoginPopup && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center pb-10 px-6"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+          onClick={() => setShowLoginPopup(false)}>
+          <div className="w-full rounded-3xl px-6 py-7 flex flex-col items-center gap-4"
+            style={{ background: "rgba(10,15,30,0.98)", border: "1px solid rgba(255,255,255,0.1)" }}
+            onClick={(e) => e.stopPropagation()}>
+            <span className="text-4xl">🌿</span>
+            <div className="text-center">
+              <p className="text-white font-bold text-lg">로그인이 필요해요</p>
+              <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
+                공간 생성, 기록, 괸당 등<br />모든 활동은 로그인 후 이용 가능합니다
+              </p>
+            </div>
+            <LoginScreen onLogin={() => setShowLoginPopup(false)} />
+          </div>
+        </div>
+      )}
+
       {/* 검색 */}
       {showSearch && (
         <SearchSheet
@@ -434,7 +461,13 @@ export default function Home() {
         ))}
       </div>
 
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <BottomNav
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          if (!user && tab !== "explore") { setShowLoginPopup(true); return; }
+          setActiveTab(tab);
+        }}
+      />
 
       {/* 공간 생성 시트 */}
       {createCoords && user && (
