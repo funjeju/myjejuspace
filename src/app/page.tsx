@@ -1,65 +1,196 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
+import mapboxgl from "mapbox-gl";
+import TopBar from "@/components/TopBar";
+import BottomNav from "@/components/BottomNav";
+import LayerToggle from "@/components/LayerToggle";
+import SpaceCard from "@/components/SpaceCard";
+import LoginScreen from "@/components/LoginScreen";
+import CreateSpaceSheet from "@/components/CreateSpaceSheet";
+import { useWarp } from "@/hooks/useWarp";
+import { useAuth } from "@/hooks/useAuth";
+import { fetchNearbySpaces } from "@/lib/spaces";
+import { Space } from "@/types/space";
+
+const Map = dynamic(() => import("@/components/Map"), { ssr: false });
+
+const MOCK_SPACES: Space[] = [
+  {
+    id: "1",
+    type: "official",
+    name: "성산일출봉",
+    coordinates: { lat: 33.4585, lng: 126.9422 },
+    active: true,
+    lastActivityAt: Date.now(),
+    tags: ["유네스코", "오름"],
+  },
+  {
+    id: "2",
+    type: "official",
+    name: "한라산 백록담",
+    coordinates: { lat: 33.3617, lng: 126.5292 },
+    active: true,
+    lastActivityAt: Date.now(),
+    tags: ["국립공원", "등산"],
+  },
+  {
+    id: "3",
+    type: "business",
+    name: "제주 흑돼지 거리",
+    coordinates: { lat: 33.4996, lng: 126.5312 },
+    active: true,
+    lastActivityAt: Date.now(),
+    tags: ["맛집", "흑돼지"],
+  },
+  {
+    id: "4",
+    type: "user",
+    name: "나만의 카페 뷰포인트",
+    coordinates: { lat: 33.4741, lng: 126.3317 },
+    active: true,
+    lastActivityAt: Date.now(),
+  },
+  {
+    id: "5",
+    type: "event",
+    name: "🎪 숨겨진 이벤트",
+    coordinates: { lat: 33.2529, lng: 126.5100 },
+    active: true,
+    lastActivityAt: Date.now(),
+  },
+];
+
+type Tab = "explore" | "myspace" | "gwandang" | "more";
 
 export default function Home() {
+  const { user, loading } = useAuth();
+  const [activeTab, setActiveTab] = useState<Tab>("explore");
+  const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
+  const [createCoords, setCreateCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [spaces, setSpaces] = useState<Space[]>(MOCK_SPACES);
+  const [pitch, setPitch] = useState(0);
+  const [sentinelVisible, setSentinelVisible] = useState(false);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const { warp } = useWarp(mapRef);
+
+  const loadSpaces = useCallback(async () => {
+    try {
+      const fetched = await fetchNearbySpaces(33.3617, 126.5292);
+      setSpaces(fetched.length > 0 ? fetched : MOCK_SPACES);
+    } catch {
+      setSpaces(MOCK_SPACES);
+    }
+  }, []);
+
+  const PITCH_STEPS = [0, 25, 45, 65];
+  const handleTogglePitch = useCallback(() => {
+    const idx = PITCH_STEPS.indexOf(pitch);
+    const next = PITCH_STEPS[(idx + 1) % PITCH_STEPS.length];
+    setPitch(next);
+    mapRef.current?.easeTo({ pitch: next, duration: 600 });
+  }, [pitch]);
+
+  const handleMapLoad = useCallback((map: mapboxgl.Map) => {
+    mapRef.current = map;
+    loadSpaces();
+
+    // 롱프레스(700ms) → 공간 생성
+    let pressTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const onPressStart = (e: mapboxgl.MapMouseEvent | mapboxgl.MapTouchEvent) => {
+      pressTimer = setTimeout(() => {
+        const { lng, lat } = e.lngLat;
+        setCreateCoords({ lat, lng });
+        setSelectedSpace(null);
+      }, 700);
+    };
+    const onPressEnd = () => {
+      if (pressTimer) clearTimeout(pressTimer);
+    };
+
+    map.on("mousedown", onPressStart);
+    map.on("mouseup", onPressEnd);
+    map.on("mousemove", onPressEnd);
+    map.on("touchstart", onPressStart);
+    map.on("touchend", onPressEnd);
+    map.on("touchmove", onPressEnd);
+  }, [loadSpaces]);
+
+  const handleLocate = useCallback(() => {
+    if (!navigator.geolocation || !mapRef.current) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+      mapRef.current?.flyTo({
+        center: [pos.coords.longitude, pos.coords.latitude],
+        zoom: 15,
+        duration: 1200,
+      });
+    });
+  }, []);
+
+  const handleWarp = useCallback(
+    (space: Space) => {
+      warp(space);
+      setSelectedSpace(null);
+    },
+    [warp]
+  );
+
+  if (loading) {
+    return (
+      <div className="w-screen h-screen bg-black flex items-center justify-center">
+        <div className="text-4xl animate-pulse">🌿</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="relative w-screen h-screen overflow-hidden bg-black">
+      {!user && <LoginScreen onLogin={() => {}} />}
+      <Map spaces={spaces} onSpaceClick={setSelectedSpace} onMapLoad={handleMapLoad} sentinelVisible={sentinelVisible} />
+
+      <TopBar nickname={user?.nickname} />
+
+      <LayerToggle
+        onLocate={handleLocate}
+        sentinelVisible={sentinelVisible}
+        onToggleSentinel={() => setSentinelVisible((v) => !v)}
+        pitch={pitch}
+        onTogglePitch={handleTogglePitch}
+      />
+
+      <div
+        className="absolute left-0 right-0 z-10 px-4 transition-all duration-300"
+        style={{
+          bottom: selectedSpace ? 72 : -200,
+          opacity: selectedSpace ? 1 : 0,
+        }}
+      >
+        {selectedSpace && (
+          <SpaceCard
+            space={selectedSpace}
+            onClose={() => setSelectedSpace(null)}
+            onWarp={handleWarp}
+          />
+        )}
+      </div>
+
+      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* 공간 생성 시트 */}
+      {createCoords && user && (
+        <CreateSpaceSheet
+          lat={createCoords.lat}
+          lng={createCoords.lng}
+          ownerId={user.uid}
+          onClose={() => setCreateCoords(null)}
+          onCreated={() => {
+            setCreateCoords(null);
+            loadSpaces();
+          }}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      )}
+    </main>
   );
 }
