@@ -86,6 +86,7 @@ export default function Home() {
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
   const [createCoords, setCreateCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [spaces, setSpaces] = useState<Space[]>(MOCK_SPACES);
+  const [showMarkers, setShowMarkers] = useState(false);
   const [pitch, setPitch] = useState(0);
   const [sentinelVisible, setSentinelVisible] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -108,6 +109,8 @@ export default function Home() {
     .filter((s) => s.type !== "event" || mapZoom >= 14);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
+  const userRef = useRef(user); // stale closure 방지
+  useEffect(() => { userRef.current = user; }, [user]);
   const { warp } = useWarp(mapRef);
   useDroneMove(mapInstance);
 
@@ -141,7 +144,7 @@ export default function Home() {
       pressTimer = setTimeout(() => {
         if (!mapRef.current) return;
         const { lng, lat } = e.lngLat;
-        if (!user) { setShowLoginPopup(true); return; }
+        if (!userRef.current) { setShowLoginPopup(true); return; }
         setCreateCoords({ lat, lng });
         setSelectedSpace(null);
       }, 700);
@@ -214,7 +217,7 @@ export default function Home() {
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-black">
       {!user && <LoginBanner />}
-      <Map spaces={filteredSpaces} onSpaceClick={setSelectedSpace} onMapLoad={handleMapLoad} sentinelVisible={sentinelVisible} />
+      <Map spaces={filteredSpaces} onSpaceClick={setSelectedSpace} onMapLoad={handleMapLoad} sentinelVisible={sentinelVisible} showMarkers={showMarkers} />
       <DirectionHUD map={mapInstance} spaces={filteredSpaces} userLocation={userLocation} />
 
       <TopBar
@@ -230,6 +233,8 @@ export default function Home() {
         onToggleSentinel={() => setSentinelVisible((v) => !v)}
         pitch={pitch}
         onTogglePitch={handleTogglePitch}
+        showMarkers={showMarkers}
+        onToggleMarkers={() => setShowMarkers((v) => !v)}
       />
 
       <LayerFilter active={layerFilter} onChange={setLayerFilter} />

@@ -13,13 +13,29 @@ interface LayerToggleProps {
   onToggleSentinel: () => void;
   pitch: number;
   onTogglePitch: () => void;
+  showMarkers: boolean;
+  onToggleMarkers: () => void;
 }
 
-export default function LayerToggle({ onLocate, sentinelVisible, onToggleSentinel, pitch, onTogglePitch }: LayerToggleProps) {
+export default function LayerToggle({ onLocate, sentinelVisible, onToggleSentinel, pitch, onTogglePitch, showMarkers, onToggleMarkers }: LayerToggleProps) {
   const is3D = pitch > 0;
 
   return (
     <div className="absolute right-4 top-1/2 -translate-y-1/2 z-10 flex flex-col gap-2">
+      {/* 마커 토글 */}
+      <button
+        onClick={onToggleMarkers}
+        title={showMarkers ? "마커 숨기기" : "마커 보기"}
+        className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200"
+        style={{
+          background: showMarkers ? "rgba(59,130,246,0.2)" : "rgba(10,15,30,0.80)",
+          backdropFilter: "blur(8px)",
+          border: showMarkers ? "1px solid rgba(59,130,246,0.5)" : "1px solid rgba(255,255,255,0.12)",
+        }}
+      >
+        <span className="text-sm">{showMarkers ? "📍" : "🗺️"}</span>
+      </button>
+
       <button
         onClick={onLocate}
         title="현재 위치"

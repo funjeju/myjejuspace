@@ -13,9 +13,10 @@ interface MapProps {
   onSpaceClick: (space: Space) => void;
   onMapLoad?: (map: mapboxgl.Map) => void;
   sentinelVisible?: boolean;
+  showMarkers?: boolean;
 }
 
-export default function Map({ spaces, onSpaceClick, onMapLoad, sentinelVisible = false }: MapProps) {
+export default function Map({ spaces, onSpaceClick, onMapLoad, sentinelVisible = false, showMarkers = true }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
@@ -28,6 +29,7 @@ export default function Map({ spaces, onSpaceClick, onMapLoad, sentinelVisible =
   const addMarkers = useCallback(
     (map: mapboxgl.Map) => {
       clearMarkers();
+      if (!showMarkers) return;
       spaces.forEach((space) => {
         const el = document.createElement("div");
         el.className = "space-marker";
@@ -106,7 +108,7 @@ export default function Map({ spaces, onSpaceClick, onMapLoad, sentinelVisible =
     if (mapRef.current?.loaded()) {
       addMarkers(mapRef.current);
     }
-  }, [spaces, addMarkers]);
+  }, [spaces, addMarkers, showMarkers]);
 
   // Sentinel 레이어 토글
   useEffect(() => {
