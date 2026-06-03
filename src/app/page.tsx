@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import mapboxgl from "mapbox-gl";
 import TopBar from "@/components/TopBar";
@@ -17,11 +17,12 @@ import MySpaceTab from "@/components/MySpaceTab";
 import EventAlert from "@/components/EventAlert";
 import DiscoveryReward from "@/components/DiscoveryReward";
 import HallOfFame from "@/components/HallOfFame";
+import OwnerUpgradeSheet from "@/components/OwnerUpgradeSheet";
 import { useEventProximity } from "@/hooks/useEventProximity";
 import { useWarp } from "@/hooks/useWarp";
 import { useAuth } from "@/hooks/useAuth";
 import { useDroneMove } from "@/hooks/useDroneMove";
-import { fetchNearbySpaces } from "@/lib/spaces";
+import { subscribeSpaces, isInsideJeju, recordBusinessVisit, hasTodayBusinessVisit, touchSpaceActivity } from "@/lib/spaces";
 import { Space, SpaceType } from "@/types/space";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
@@ -88,7 +89,9 @@ export default function Home() {
   const [dismissedEvents, setDismissedEvents] = useState<Set<string>>(new Set());
   const [reward, setReward] = useState<{ badge: string; points: number; eventName: string } | null>(null);
   const [showHallOfFame, setShowHallOfFame] = useState(false);
+  const [showOwnerUpgrade, setShowOwnerUpgrade] = useState(false);
   const [mapZoom, setMapZoom] = useState(9.5);
+  const [notifications, setNotifications] = useState<{ id: string; message: string }[]>([]);
 
   const { nearbyEvents } = useEventProximity(userLocation, spaces);
   const visibleNearbyEvent = nearbyEvents.find((e) => !dismissedEvents.has(e.space.id));
@@ -100,14 +103,15 @@ export default function Home() {
   const { warp } = useWarp(mapRef);
   useDroneMove(mapInstance);
 
-  const loadSpaces = useCallback(async () => {
-    try {
-      const fetched = await fetchNearbySpaces(33.3617, 126.5292);
+  // 실시간 리스너
+  useEffect(() => {
+    const unsub = subscribeSpaces((fetched) => {
       setSpaces(fetched.length > 0 ? fetched : MOCK_SPACES);
-    } catch {
-      setSpaces(MOCK_SPACES);
-    }
+    });
+    return unsub;
   }, []);
+
+  const loadSpaces = useCallback(() => {}, []); // 실시간 구독으로 대체됨
 
   const PITCH_STEPS = [0, 25, 45, 65];
   const handleTogglePitch = useCallback(() => {
@@ -137,6 +141,15 @@ export default function Home() {
     };
 
     map.on("zoom", () => setMapZoom(map.getZoom()));
+
+    // 제주도 범위 이탈 방지
+    map.on("moveend", () => {
+      const { lat, lng } = map.getCenter();
+      if (!isInsideJeju(lat, lng)) {
+        map.easeTo({ center: [126.5292, 33.3617], duration: 800 });
+      }
+    });
+
     map.on("mousedown", onPressStart);
     map.on("mouseup", onPressEnd);
     map.on("mousemove", onPressEnd);
@@ -155,11 +168,29 @@ export default function Home() {
   }, []);
 
   const handleWarp = useCallback(
-    (space: Space) => {
+    async (space: Space) => {
       warp(space);
       setSelectedSpace(null);
+
+      // 공간 활동 시간 갱신
+      if (space.id && space.type === "user") {
+        touchSpaceActivity(space.id).catch(() => {});
+      }
+
+      // F-208: 비즈니스 공간 워프 시 힌트 획득 기록 (1일 1회)
+      if (space.type === "business" && user) {
+        const already = await hasTodayBusinessVisit(user.uid).catch(() => true);
+        if (!already) {
+          recordBusinessVisit(user.uid, space.id).catch(() => {});
+          setNotifications((prev) => [
+            ...prev,
+            { id: Date.now().toString(), message: `🍊 ${space.name} 방문! 이벤트 힌트 레벨 2 획득` },
+          ]);
+          setTimeout(() => setNotifications((prev) => prev.slice(1)), 4000);
+        }
+      }
     },
-    [warp]
+    [warp, user]
   );
 
   if (loading) {
@@ -282,9 +313,40 @@ export default function Home() {
                 <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>이벤트를 발견한 탐험가들</p>
               </div>
             </button>
+
+            {user?.type === "explorer" && (
+              <button onClick={() => { setShowOwnerUpgrade(true); setActiveTab("explore"); }}
+                className="flex items-center gap-3 px-4 py-4 rounded-2xl w-full text-left"
+                style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)" }}>
+                <span className="text-2xl">✨</span>
+                <div>
+                  <p className="text-white font-semibold text-sm">스페이스 오너 되기</p>
+                  <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>나만의 공간을 만들어보세요</p>
+                </div>
+              </button>
+            )}
           </div>
         </div>
       )}
+
+      {/* 오너 업그레이드 */}
+      {showOwnerUpgrade && user && (
+        <OwnerUpgradeSheet
+          uid={user.uid}
+          onClose={() => setShowOwnerUpgrade(false)}
+          onUpgraded={() => { setShowOwnerUpgrade(false); }}
+        />
+      )}
+
+      {/* 토스트 알림 */}
+      <div className="absolute left-4 right-4 z-40 flex flex-col gap-2" style={{ top: 70 }}>
+        {notifications.map((n) => (
+          <div key={n.id} className="px-4 py-3 rounded-2xl text-sm text-white text-center"
+            style={{ background: "rgba(249,115,22,0.85)", backdropFilter: "blur(8px)" }}>
+            {n.message}
+          </div>
+        ))}
+      </div>
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
 

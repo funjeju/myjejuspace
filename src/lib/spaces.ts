@@ -2,12 +2,62 @@ import {
   collection,
   addDoc,
   getDocs,
+  onSnapshot,
   query,
   where,
   GeoPoint,
+  updateDoc,
+  doc,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { Space } from "@/types/space";
+
+// 제주도 대략적 bbox
+const JEJU_BOUNDS = {
+  minLat: 33.10, maxLat: 33.57,
+  minLng: 126.14, maxLng: 126.98,
+};
+
+export function isInsideJeju(lat: number, lng: number): boolean {
+  return (
+    lat >= JEJU_BOUNDS.minLat && lat <= JEJU_BOUNDS.maxLat &&
+    lng >= JEJU_BOUNDS.minLng && lng <= JEJU_BOUNDS.maxLng
+  );
+}
+
+// 실시간 스페이스 구독 (onSnapshot)
+export function subscribeSpaces(callback: (spaces: Space[]) => void): () => void {
+  const q = query(collection(db, "spaces"), where("active", "==", true));
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Space)));
+  });
+}
+
+// F-208 비즈니스 공간 방문 시 힌트 획득 기록
+export async function recordBusinessVisit(uid: string, spaceId: string): Promise<void> {
+  await addDoc(collection(db, "businessVisits"), {
+    uid,
+    spaceId,
+    visitedAt: Date.now(),
+  });
+}
+
+// 오늘 비즈니스 방문 여부 확인
+export async function hasTodayBusinessVisit(uid: string): Promise<boolean> {
+  const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+  const q = query(
+    collection(db, "businessVisits"),
+    where("uid", "==", uid),
+    where("visitedAt", ">=", startOfDay.getTime())
+  );
+  const snap = await getDocs(q);
+  return !snap.empty;
+}
+
+// 공간 활동 시간 갱신
+export async function touchSpaceActivity(spaceId: string): Promise<void> {
+  await updateDoc(doc(db, "spaces", spaceId), { lastActivityAt: Date.now(), inactiveWarned: false });
+}
 
 // 두 좌표 간 거리 (미터)
 export function getDistanceMeters(

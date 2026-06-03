@@ -1,12 +1,7 @@
 {
   "crons": [
-    {
-      "path": "/api/cron/spawn-events",
-      "schedule": "0 */6 * * *"
-    },
-    {
-      "path": "/api/cron/clean-events",
-      "schedule": "0 * * * *"
-    }
+    { "path": "/api/cron/spawn-events", "schedule": "0 */6 * * *" },
+    { "path": "/api/cron/clean-events", "schedule": "0 * * * *" },
+    { "path": "/api/cron/check-inactive-spaces", "schedule": "0 0 * * *" }
   ]
 }
