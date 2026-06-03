@@ -4,6 +4,12 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "FunJeju — 제주 디지털 월드",
   description: "제주도라는 무대 위의 디지털 월드",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "FunJeju",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

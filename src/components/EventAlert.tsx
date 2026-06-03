@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { X, Zap, MapPin } from "lucide-react";
 import { NearbyEvent } from "@/hooks/useEventProximity";
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { getAuth } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 interface EventAlertProps {
   event: NearbyEvent;
@@ -21,14 +22,23 @@ export default function EventAlert({ event, uid, onDismiss, onDiscovered }: Even
     setLoading(true);
     setError(null);
     try {
-      const functions = getFunctions(undefined, "asia-northeast3");
-      const discoverEvent = httpsCallable(functions, "discoverEvent");
-      const result = await discoverEvent({ eventId: event.space.id });
-      const data = result.data as { success: boolean; reward: { badge: string; points: number } };
+      const idToken = await getAuth(auth.app).currentUser?.getIdToken();
+      if (!idToken) throw new Error("로그인이 필요합니다.");
+
+      const res = await fetch("/api/events/discover", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ eventId: event.space.id }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "발견 처리에 실패했습니다.");
       onDiscovered(event.space.id, data.reward);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "발견 처리에 실패했습니다.";
-      setError(msg);
+      setError(e instanceof Error ? e.message : "발견 처리에 실패했습니다.");
     } finally {
       setLoading(false);
     }

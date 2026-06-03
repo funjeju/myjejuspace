@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/spawn-events",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/clean-events",
+      "schedule": "0 * * * *"
+    }
+  ]
+}
