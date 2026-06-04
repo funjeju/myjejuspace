@@ -8,6 +8,16 @@ import { Space } from "@/types/space";
 
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
+// 유저 공간 레벨별 마커 이미지
+export const SPACE_LEVEL_ICONS: Record<number, string> = {
+  1: "/icons/space-lv1.png",
+  2: "/icons/space-lv2.png",
+  3: "/icons/space-lv3.png",
+  4: "/icons/space-lv4.png",
+  5: "/icons/space-lv5.png",
+  6: "/icons/space-lv6.png",
+};
+
 interface MapProps {
   spaces: Space[];
   onSpaceClick: (space: Space) => void;
