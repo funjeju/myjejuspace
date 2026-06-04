@@ -75,19 +75,11 @@ export function getDistanceMeters(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// 50m 내 기존 유저 공간 존재 여부 확인
-async function isTooClose(lat: number, lng: number): Promise<boolean> {
-  // 위도 0.0005도 ≈ 55m, 간단한 bbox 사전 필터
-  const snap = await getDocs(
-    query(collection(db, "spaces"), where("type", "==", "user"))
-  );
-  for (const d of snap.docs) {
-    const s = d.data() as Space & { coordinates: { lat: number; lng: number } };
-    if (getDistanceMeters(lat, lng, s.coordinates.lat, s.coordinates.lng) < 50) {
-      return true;
-    }
-  }
-  return false;
+// 50m 내 기존 유저 공간 존재 여부 확인 (메모리 내 spaces 사용 → Firestore 쿼리 없음)
+function isTooCloseInMemory(lat: number, lng: number, spaces: Space[]): boolean {
+  return spaces
+    .filter((s) => s.type === "user")
+    .some((s) => getDistanceMeters(lat, lng, s.coordinates.lat, s.coordinates.lng) < 50);
 }
 
 // F-401: 유저당 보유 공간 수 확인
@@ -103,21 +95,24 @@ export async function createUserSpace(
   description: string,
   lat: number,
   lng: number,
-  isPremium = false
+  spaces: Space[],        // 메모리 내 spaces — Firestore 추가 쿼리 없음
+  isPremium = false,
+  preValidated = false    // 시트 열릴 때 이미 검증했으면 true
 ): Promise<{ success: boolean; error?: string; space?: Space; limitReached?: boolean }> {
   if (!name.trim()) return { success: false, error: "공간 이름을 입력해주세요." };
 
-  // F-401: 무료 플랜 1개 제한
-  if (!isPremium) {
-    const count = await getUserSpaceCount(ownerId);
-    if (count >= 1) {
-      return { success: false, error: "무료 플랜은 공간 1개까지 생성 가능합니다.", limitReached: true };
+  if (!preValidated) {
+    // F-401: 무료 플랜 1개 제한
+    if (!isPremium) {
+      const count = await getUserSpaceCount(ownerId);
+      if (count >= 1) {
+        return { success: false, error: "무료 플랜은 공간 1개까지 생성 가능합니다.", limitReached: true };
+      }
     }
-  }
 
-  const tooClose = await isTooClose(lat, lng);
-  if (tooClose) {
-    return { success: false, error: "반경 50m 이내에 이미 공간이 있습니다." };
+    if (isTooCloseInMemory(lat, lng, spaces)) {
+      return { success: false, error: "반경 50m 이내에 이미 공간이 있습니다." };
+    }
   }
 
   const space: Omit<Space, "id"> & { geoPoint: GeoPoint } = {

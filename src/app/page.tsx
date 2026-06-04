@@ -20,6 +20,7 @@ import DiscoveryReward from "@/components/DiscoveryReward";
 import HallOfFame from "@/components/HallOfFame";
 import OwnerUpgradeSheet from "@/components/OwnerUpgradeSheet";
 import SearchSheet from "@/components/SearchSheet";
+import MapContextMenu from "@/components/MapContextMenu";
 import CCTVSheet from "@/components/CCTVSheet";
 import BusinessPortal from "@/components/BusinessPortal";
 import TripPlanTab from "@/components/TripPlanTab";
@@ -99,6 +100,7 @@ export default function Home() {
   const [showOwnerUpgrade, setShowOwnerUpgrade] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showCCTV, setShowCCTV] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; lat: number; lng: number } | null>(null);
   const [mapZoom, setMapZoom] = useState(9.5);
   const [notifications, setNotifications] = useState<{ id: string; message: string }[]>([]);
 
@@ -154,6 +156,14 @@ export default function Home() {
     };
 
     map.on("zoom", () => setMapZoom(map.getZoom()));
+
+    // 우클릭 컨텍스트 메뉴 (데스크탑)
+    map.on("contextmenu", (e) => {
+      e.preventDefault?.();
+      if (!userRef.current) { setShowLoginPopup(true); return; }
+      const { lng, lat } = e.lngLat;
+      setContextMenu({ x: e.originalEvent.clientX, y: e.originalEvent.clientY, lat, lng });
+    });
 
     // 제주도 범위 이탈 방지
     map.on("moveend", () => {
@@ -435,6 +445,21 @@ export default function Home() {
         </div>
       )}
 
+      {/* 우클릭 컨텍스트 메뉴 */}
+      {contextMenu && (
+        <MapContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          lat={contextMenu.lat}
+          lng={contextMenu.lng}
+          onCreateSpace={() => {
+            setCreateCoords({ lat: contextMenu.lat, lng: contextMenu.lng });
+            setSelectedSpace(null);
+          }}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+
       {/* 검색 */}
       {showSearch && (
         <SearchSheet
@@ -480,6 +505,7 @@ export default function Home() {
           lat={createCoords.lat}
           lng={createCoords.lng}
           ownerId={user.uid}
+          spaces={spaces}
           onClose={() => setCreateCoords(null)}
           onCreated={() => {
             setCreateCoords(null);
