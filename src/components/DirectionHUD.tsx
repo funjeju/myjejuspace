@@ -16,8 +16,7 @@ export default function DirectionHUD({ map, spaces, userLocation }: DirectionHUD
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !map || !userLocation || spaces.length === 0) return;
-
+    if (!canvas || !map || spaces.length === 0) return;
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -27,16 +26,9 @@ export default function DirectionHUD({ map, spaces, userLocation }: DirectionHUD
     const render = () => {
       const center = map.getCenter();
       const bearing = map.getBearing();
-
-      // 유저 위치의 화면 좌표
-      const userPoint = map.project([userLocation.lng, userLocation.lat]);
-
-      const arrows = buildArrows(
-        userLocation.lat,
-        userLocation.lng,
-        bearing,
-        spaces
-      );
+      const loc = userLocation ?? { lat: center.lat, lng: center.lng };
+      const userPoint = map.project([loc.lng, loc.lat]);
+      const arrows = buildArrows(loc.lat, loc.lng, bearing, spaces);
 
       drawArrows(canvas, arrows, userPoint.x, userPoint.y);
     };

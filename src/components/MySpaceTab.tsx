@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Bookmark, X, Sparkles, Loader2, Send } from "lucide-react";
+import { Bookmark, X, Sparkles, Loader2, Send, Trash2 } from "lucide-react";
 import { getMyCollection, removeFromCollection, CollectionItem } from "@/lib/collection";
+import { calcSpaceLevel } from "@/lib/spaceLevel";
 import { SPACE_COLORS } from "@/lib/mapbox";
 import { getDocs, query, collection, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Space } from "@/types/space";
+import { deleteUserSpace } from "@/lib/spaces";
 
 const SPACE_EMOJIS: Record<string, string> = {
   official: "🏔️", business: "🍊", user: "✨", event: "🎪",
@@ -15,6 +17,12 @@ const SPACE_EMOJIS: Record<string, string> = {
 interface MySpaceTabProps {
   uid: string;
   nickname: string;
+}
+
+async function confirmDelete(spaceId: string, uid: string, reload: () => void) {
+  if (!confirm("이 공간을 삭제하시겠습니까? 복구할 수 없습니다.")) return;
+  await deleteUserSpace(spaceId, uid);
+  reload();
 }
 
 export default function MySpaceTab({ uid, nickname }: MySpaceTabProps) {
@@ -100,31 +108,56 @@ export default function MySpaceTab({ uid, nickname }: MySpaceTabProps) {
         <div className="flex items-center gap-2 mb-3">
           <span className="text-sm">✨</span>
           <span className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.7)" }}>
-            내 공간 {mySpaces.length}개
+            내 공간
+          </span>
+          <span className="text-xs px-2 py-0.5 rounded-full font-bold ml-1"
+            style={{
+              background: mySpaces.length > 0 ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.08)",
+              color: mySpaces.length > 0 ? "#22C55E" : "rgba(255,255,255,0.4)",
+            }}>
+            {mySpaces.length > 0 ? `${mySpaces.length}개 있음` : "없음"}
           </span>
         </div>
+
         {mySpaces.length === 0 ? (
-          <p className="text-xs py-3 text-center" style={{ color: "rgba(255,255,255,0.25)" }}>
-            아직 만든 공간이 없습니다
-          </p>
+          <div className="flex items-center gap-3 px-4 py-4 rounded-2xl"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.1)" }}>
+            <span className="text-2xl">🏝️</span>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.5)" }}>아직 공간이 없어요</p>
+              <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>지도에서 우클릭 → 스페이스 만들기</p>
+            </div>
+          </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {mySpaces.map((space) => (
-              <div key={space.id} className="flex items-center gap-3 px-4 py-3 rounded-2xl"
-                style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)" }}>
-                <span className="text-xl">✨</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-semibold text-sm truncate">{space.name}</p>
-                  {space.description && (
-                    <p className="text-xs truncate mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{space.description}</p>
-                  )}
+            {mySpaces.map((space) => {
+              const levelInfo = calcSpaceLevel(space.visitDays ?? 0, space.visitorCount ?? 0);
+              return (
+                <div key={space.id} className="flex items-center gap-3 px-4 py-3 rounded-2xl"
+                  style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)" }}>
+                  <img src={levelInfo.icon} style={{ width: 40, height: 40, objectFit: "contain" }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-white font-semibold text-sm truncate">{space.name}</p>
+                      <span className="text-xs" style={{ color: "#A78BFA" }}>Lv.{levelInfo.level}</span>
+                    </div>
+                    <div className="flex gap-3 mt-0.5">
+                      <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>📅 {space.visitDays ?? 0}일</span>
+                      <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>👣 {space.visitorCount ?? 0}명</span>
+                    </div>
+                  </div>
+                  <span className="text-xs px-2 py-1 rounded-full flex-shrink-0"
+                    style={{ background: space.active ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.08)", color: space.active ? "#22C55E" : "rgba(255,255,255,0.4)" }}>
+                    {space.active ? "활성" : "비활성"}
+                  </span>
+                  <button onClick={() => confirmDelete(space.id, uid, load)}
+                    className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ background: "rgba(239,68,68,0.15)" }}>
+                    <Trash2 size={14} color="#EF4444" />
+                  </button>
                 </div>
-                <span className="text-xs px-2 py-1 rounded-full flex-shrink-0"
-                  style={{ background: space.active ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.08)", color: space.active ? "#22C55E" : "rgba(255,255,255,0.4)" }}>
-                  {space.active ? "활성" : "비활성"}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

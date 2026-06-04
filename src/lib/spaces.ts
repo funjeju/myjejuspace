@@ -3,6 +3,7 @@ import {
   addDoc,
   getDocs,
   getDoc,
+  deleteDoc,
   onSnapshot,
   query,
   where,
@@ -53,6 +54,16 @@ export async function hasTodayBusinessVisit(uid: string): Promise<boolean> {
   );
   const snap = await getDocs(q);
   return !snap.empty;
+}
+
+// 공간 삭제
+export async function deleteUserSpace(spaceId: string, ownerId: string): Promise<{ success: boolean; error?: string }> {
+  const ref = doc(db, "spaces", spaceId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return { success: false, error: "공간을 찾을 수 없습니다." };
+  if (snap.data().ownerId !== ownerId) return { success: false, error: "권한이 없습니다." };
+  await deleteDoc(ref);
+  return { success: true };
 }
 
 // 공간 활동 시간 갱신
@@ -130,22 +141,17 @@ export async function createUserSpace(
 
   const isAdmin = userEmail ? ADMIN_EMAILS.includes(userEmail) : false;
 
-  if (!preValidated && !isAdmin) {
-    if (!isPremium) {
-      const count = await getUserSpaceCount(ownerId);
-      if (count >= 1) {
-        return { success: false, error: "무료 플랜은 공간 1개까지 생성 가능합니다.", limitReached: true };
-      }
-    }
-
-    if (isTooCloseInMemory(lat, lng, spaces)) {
-      return { success: false, error: "반경 50m 이내에 이미 공간이 있습니다." };
-    }
+  // 50m 제한은 어드민 포함 모두 적용
+  if (!preValidated && isTooCloseInMemory(lat, lng, spaces)) {
+    return { success: false, error: "반경 50m 이내에 이미 공간이 있습니다." };
   }
 
-  // 어드민은 50m 제한도 스킵, 단 preValidated=false일 때만 체크
-  if (!preValidated && isAdmin && isTooCloseInMemory(lat, lng, spaces)) {
-    return { success: false, error: "반경 50m 이내에 이미 공간이 있습니다." };
+  // 개수 제한은 어드민 제외
+  if (!preValidated && !isAdmin && !isPremium) {
+    const count = await getUserSpaceCount(ownerId);
+    if (count >= 1) {
+      return { success: false, error: "무료 플랜은 공간 1개까지 생성 가능합니다.", limitReached: true };
+    }
   }
 
   const space: Omit<Space, "id"> & { geoPoint: GeoPoint } = {

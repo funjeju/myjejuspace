@@ -43,18 +43,17 @@ export default function Map({ spaces, onSpaceClick, onMapLoad, showMarkers = tru
       spaces.forEach((space) => {
         const el = document.createElement("div");
         el.className = "space-marker";
-        el.style.cssText = `cursor: pointer; transition: transform 0.15s ease;`;
+        el.style.cssText = `cursor: pointer; transition: transform 0.15s ease; transform-origin: bottom center;`;
         el.addEventListener("mouseenter", () => (el.style.transform = "scale(1.15)"));
         el.addEventListener("mouseleave", () => (el.style.transform = "scale(1)"));
         el.addEventListener("click", () => onSpaceClick(space));
 
         if (space.type === "user") {
-          // 레벨별 이미지 마커
           const levelInfo = calcSpaceLevel(space.visitDays ?? 0, space.visitorCount ?? 0);
           el.style.cssText += `width: 56px; height: 56px;`;
           const img = document.createElement("img");
           img.src = levelInfo.icon;
-          img.style.cssText = `width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));`;
+          img.style.cssText = `width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.6)); display: block;`;
           el.appendChild(img);
         } else {
           // 기존 원형 마커
@@ -70,7 +69,7 @@ export default function Map({ spaces, onSpaceClick, onMapLoad, showMarkers = tru
           el.innerHTML = space.type === "official" ? "🏔️" : space.type === "business" ? "🍊" : "🎪";
         }
 
-        const marker = new mapboxgl.Marker({ element: el })
+        const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
           .setLngLat([space.coordinates.lng, space.coordinates.lat])
           .addTo(map);
         markersRef.current.push(marker);
