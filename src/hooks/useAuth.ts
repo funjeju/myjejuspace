@@ -14,7 +14,13 @@ export function useAuth() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const snap = await getDoc(doc(db, "users", firebaseUser.uid));
-        setUser(snap.exists() ? (snap.data() as User) : null);
+        if (snap.exists()) {
+          // Firebase Auth의 email을 항상 최신으로 사용
+          const userData = snap.data() as User;
+          setUser({ ...userData, email: firebaseUser.email ?? userData.email });
+        } else {
+          setUser(null);
+        }
       } else {
         setUser(null);
       }

@@ -31,10 +31,10 @@ export default function MySpaceTab({ uid, nickname }: MySpaceTabProps) {
     setLoading(true);
     const [data, spacesSnap] = await Promise.all([
       getMyCollection(uid),
-      getDocs(query(collection(db, "spaces"), where("ownerId", "==", uid), where("type", "==", "user"))),
+      getDocs(query(collection(db, "spaces"), where("ownerId", "==", uid))),
     ]);
     setItems(data);
-    setMySpaces(spacesSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Space)));
+    setMySpaces(spacesSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Space)).filter((s) => s.type === "user"));
     setLoading(false);
   }, [uid]);
 
