@@ -89,7 +89,7 @@ export async function getUserSpaceCount(ownerId: string): Promise<number> {
   return snap.size;
 }
 
-const ADMIN_EMAILS = ["naggu1999@gmail.com"];
+const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "").split(",").map((e) => e.trim()).filter(Boolean);
 
 export async function createUserSpace(
   ownerId: string,

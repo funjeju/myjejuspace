@@ -5,7 +5,7 @@ import { X, MapPin, Loader2 } from "lucide-react";
 import { createUserSpace, getUserSpaceCount, getDistanceMeters } from "@/lib/spaces";
 import { Space } from "@/types/space";
 
-const ADMIN_EMAILS = ["naggu1999@gmail.com"];
+const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "").split(",").map((e) => e.trim()).filter(Boolean);
 
 interface CreateSpaceSheetProps {
   lat: number;
