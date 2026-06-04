@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import { Bookmark, X, Sparkles, Loader2, Send } from "lucide-react";
 import { getMyCollection, removeFromCollection, CollectionItem } from "@/lib/collection";
 import { SPACE_COLORS } from "@/lib/mapbox";
+import { getDocs, query, collection, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Space } from "@/types/space";
 
 const SPACE_EMOJIS: Record<string, string> = {
   official: "🏔️", business: "🍊", user: "✨", event: "🎪",
@@ -15,6 +18,7 @@ interface MySpaceTabProps {
 }
 
 export default function MySpaceTab({ uid, nickname }: MySpaceTabProps) {
+  const [mySpaces, setMySpaces] = useState<Space[]>([]);
   const [items, setItems] = useState<CollectionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
@@ -25,8 +29,12 @@ export default function MySpaceTab({ uid, nickname }: MySpaceTabProps) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const data = await getMyCollection(uid);
+    const [data, spacesSnap] = await Promise.all([
+      getMyCollection(uid),
+      getDocs(query(collection(db, "spaces"), where("ownerId", "==", uid), where("type", "==", "user"))),
+    ]);
     setItems(data);
+    setMySpaces(spacesSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Space)));
     setLoading(false);
   }, [uid]);
 
@@ -87,6 +95,42 @@ export default function MySpaceTab({ uid, nickname }: MySpaceTabProps) {
 
   return (
     <div className="flex-1 overflow-y-auto">
+      {/* 내 공간 */}
+      <div className="px-4 pt-4 pb-2">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-sm">✨</span>
+          <span className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.7)" }}>
+            내 공간 {mySpaces.length}개
+          </span>
+        </div>
+        {mySpaces.length === 0 ? (
+          <p className="text-xs py-3 text-center" style={{ color: "rgba(255,255,255,0.25)" }}>
+            아직 만든 공간이 없습니다
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {mySpaces.map((space) => (
+              <div key={space.id} className="flex items-center gap-3 px-4 py-3 rounded-2xl"
+                style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)" }}>
+                <span className="text-xl">✨</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-semibold text-sm truncate">{space.name}</p>
+                  {space.description && (
+                    <p className="text-xs truncate mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{space.description}</p>
+                  )}
+                </div>
+                <span className="text-xs px-2 py-1 rounded-full flex-shrink-0"
+                  style={{ background: space.active ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.08)", color: space.active ? "#22C55E" : "rgba(255,255,255,0.4)" }}>
+                  {space.active ? "활성" : "비활성"}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mx-4 my-2" style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+
       {/* 컬렉션 */}
       <div className="px-4 py-4">
         <div className="flex items-center gap-2 mb-3">

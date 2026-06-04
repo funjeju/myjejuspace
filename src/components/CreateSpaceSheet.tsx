@@ -5,16 +5,20 @@ import { X, MapPin, Loader2 } from "lucide-react";
 import { createUserSpace, getUserSpaceCount, getDistanceMeters } from "@/lib/spaces";
 import { Space } from "@/types/space";
 
+const ADMIN_EMAILS = ["naggu1999@gmail.com"];
+
 interface CreateSpaceSheetProps {
   lat: number;
   lng: number;
   ownerId: string;
+  userEmail?: string;
   spaces: Space[];
   onClose: () => void;
   onCreated: () => void;
 }
 
-export default function CreateSpaceSheet({ lat, lng, ownerId, spaces, onClose, onCreated }: CreateSpaceSheetProps) {
+export default function CreateSpaceSheet({ lat, lng, ownerId, userEmail, spaces, onClose, onCreated }: CreateSpaceSheetProps) {
+  const isAdmin = userEmail ? ADMIN_EMAILS.includes(userEmail) : false;
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,6 +35,9 @@ export default function CreateSpaceSheet({ lat, lng, ownerId, spaces, onClose, o
     setPreValidated(false);
     setError(null);
     setLimitReached(false);
+
+    // 어드민은 검증 스킵
+    if (isAdmin) { setPreValidated(true); return; }
 
     (async () => {
       // 50m 제한 — 메모리에서 즉시 확인

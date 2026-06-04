@@ -518,6 +518,7 @@ export default function Home() {
           lat={createCoords.lat}
           lng={createCoords.lng}
           ownerId={user.uid}
+          userEmail={user.email}
           spaces={spaces}
           onClose={() => setCreateCoords(null)}
           onCreated={() => {

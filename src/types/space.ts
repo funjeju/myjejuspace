@@ -19,6 +19,7 @@ export interface User {
   uid: string;
   type: UserType;
   nickname: string;
+  email?: string;
   avatarUrl?: string;
   createdAt: number;
 }

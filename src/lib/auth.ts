@@ -7,7 +7,7 @@ const provider = new GoogleAuthProvider();
 
 export async function signInWithGoogle(): Promise<User> {
   const result = await signInWithPopup(auth, provider);
-  const { uid, displayName, photoURL } = result.user;
+  const { uid, displayName, photoURL, email } = result.user;
 
   const ref = doc(db, "users", uid);
   const snap = await getDoc(ref);
@@ -17,6 +17,7 @@ export async function signInWithGoogle(): Promise<User> {
       uid,
       type: "explorer",
       nickname: displayName ?? "탐험자",
+      email: email ?? undefined,
       avatarUrl: photoURL ?? undefined,
       createdAt: Date.now(),
     };

@@ -89,20 +89,24 @@ export async function getUserSpaceCount(ownerId: string): Promise<number> {
   return snap.size;
 }
 
+const ADMIN_EMAILS = ["naggu1999@gmail.com"];
+
 export async function createUserSpace(
   ownerId: string,
   name: string,
   description: string,
   lat: number,
   lng: number,
-  spaces: Space[],        // 메모리 내 spaces — Firestore 추가 쿼리 없음
+  spaces: Space[],
   isPremium = false,
-  preValidated = false    // 시트 열릴 때 이미 검증했으면 true
+  preValidated = false,
+  userEmail?: string
 ): Promise<{ success: boolean; error?: string; space?: Space; limitReached?: boolean }> {
   if (!name.trim()) return { success: false, error: "공간 이름을 입력해주세요." };
 
-  if (!preValidated) {
-    // F-401: 무료 플랜 1개 제한
+  const isAdmin = userEmail ? ADMIN_EMAILS.includes(userEmail) : false;
+
+  if (!preValidated && !isAdmin) {
     if (!isPremium) {
       const count = await getUserSpaceCount(ownerId);
       if (count >= 1) {
@@ -113,6 +117,11 @@ export async function createUserSpace(
     if (isTooCloseInMemory(lat, lng, spaces)) {
       return { success: false, error: "반경 50m 이내에 이미 공간이 있습니다." };
     }
+  }
+
+  // 어드민은 50m 제한도 스킵, 단 preValidated=false일 때만 체크
+  if (!preValidated && isAdmin && isTooCloseInMemory(lat, lng, spaces)) {
+    return { success: false, error: "반경 50m 이내에 이미 공간이 있습니다." };
   }
 
   const space: Omit<Space, "id"> & { geoPoint: GeoPoint } = {
