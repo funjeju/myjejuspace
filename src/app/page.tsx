@@ -29,7 +29,7 @@ import { useEventProximity } from "@/hooks/useEventProximity";
 import { useWarp } from "@/hooks/useWarp";
 import { useAuth } from "@/hooks/useAuth";
 import { useDroneMove } from "@/hooks/useDroneMove";
-import { subscribeSpaces, isInsideJeju, recordBusinessVisit, hasTodayBusinessVisit, touchSpaceActivity } from "@/lib/spaces";
+import { subscribeSpaces, isInsideJeju, recordBusinessVisit, hasTodayBusinessVisit, touchSpaceActivity, recordSpaceVisit } from "@/lib/spaces";
 import { Space, SpaceType } from "@/types/space";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
@@ -197,9 +197,9 @@ export default function Home() {
       warp(space);
       setSelectedSpace(null);
 
-      // 공간 활동 시간 갱신
-      if (space.id && space.type === "user") {
-        touchSpaceActivity(space.id).catch(() => {});
+      // 유저 공간 방문 기록 (레벨업 트리거)
+      if (space.id && space.type === "user" && user) {
+        recordSpaceVisit(space.id, user.uid).catch(() => {});
       }
 
       // F-208: 비즈니스 공간 워프 시 힌트 획득 기록 (1일 1회)

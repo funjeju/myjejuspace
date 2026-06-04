@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { MAPBOX_TOKEN, MAPBOX_CONFIG, SPACE_COLORS } from "@/lib/mapbox";
+import { calcSpaceLevel } from "@/lib/spaceLevel";
 import { Space } from "@/types/space";
 
 mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -48,10 +49,11 @@ export default function Map({ spaces, onSpaceClick, onMapLoad, showMarkers = tru
         el.addEventListener("click", () => onSpaceClick(space));
 
         if (space.type === "user") {
-          // Lv.1 이미지 마커
+          // 레벨별 이미지 마커
+          const levelInfo = calcSpaceLevel(space.visitDays ?? 0, space.visitorCount ?? 0);
           el.style.cssText += `width: 56px; height: 56px;`;
           const img = document.createElement("img");
-          img.src = "/icons/space-lv1.png";
+          img.src = levelInfo.icon;
           img.style.cssText = `width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));`;
           el.appendChild(img);
         } else {

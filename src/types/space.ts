@@ -13,6 +13,11 @@ export interface Space {
   lastActivityAt: number;
   imageUrl?: string;
   tags?: string[];
+  // 레벨 시스템
+  visitDays?: number;
+  visitorCount?: number;
+  lastVisitDate?: string; // "YYYY-MM-DD"
+  level?: number;
 }
 
 export interface User {

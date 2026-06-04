@@ -2,6 +2,7 @@ import {
   collection,
   addDoc,
   getDocs,
+  getDoc,
   onSnapshot,
   query,
   where,
@@ -57,6 +58,29 @@ export async function hasTodayBusinessVisit(uid: string): Promise<boolean> {
 // 공간 활동 시간 갱신
 export async function touchSpaceActivity(spaceId: string): Promise<void> {
   await updateDoc(doc(db, "spaces", spaceId), { lastActivityAt: Date.now(), inactiveWarned: false });
+}
+
+// 방문 기록 — 출석일수 + 방문자 수 업데이트 → 레벨 재계산
+export async function recordSpaceVisit(spaceId: string, visitorUid: string): Promise<void> {
+  const { calcSpaceLevel } = await import("./spaceLevel");
+  const ref = doc(db, "spaces", spaceId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+
+  const data = snap.data();
+  const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+  const lastVisitDate = data.lastVisitDate ?? "";
+  const visitDays = (data.visitDays ?? 0) + (lastVisitDate === today ? 0 : 1);
+  const visitorCount = (data.visitorCount ?? 0) + 1;
+  const levelInfo = calcSpaceLevel(visitDays, visitorCount);
+
+  await updateDoc(ref, {
+    visitDays,
+    visitorCount,
+    lastVisitDate: today,
+    level: levelInfo.level,
+    lastActivityAt: Date.now(),
+  });
 }
 
 // 두 좌표 간 거리 (미터)

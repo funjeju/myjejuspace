@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { X, Zap, MapPin, Clock, User, ChevronDown, PenLine, Bookmark, BookmarkCheck } from "lucide-react";
 import { Space } from "@/types/space";
 import { SPACE_COLORS } from "@/lib/mapbox";
+import { calcSpaceLevel, getNextLevel } from "@/lib/spaceLevel";
 import { addToCollection, removeFromCollection, isInCollection } from "@/lib/collection";
 import Guestbook from "./Guestbook";
 
@@ -35,6 +36,8 @@ const SPACE_EMOJIS: Record<string, string> = {
 export default function SpaceDetailSheet({ space, distance, onClose, onWarp, onRecord, currentUser }: SpaceDetailSheetProps) {
   const [expanded, setExpanded] = useState(false);
   const [collectionId, setCollectionId] = useState<string | null>(null);
+  const levelInfo = space.type === "user" ? calcSpaceLevel(space.visitDays ?? 0, space.visitorCount ?? 0) : null;
+  const nextLevel = levelInfo ? getNextLevel(levelInfo) : null;
 
   useEffect(() => {
     if (!currentUser) return;
@@ -134,6 +137,44 @@ export default function SpaceDetailSheet({ space, distance, onClose, onWarp, onR
               #{tag}
             </span>
           ))}
+        </div>
+      )}
+
+      {/* 유저 공간 레벨 */}
+      {levelInfo && (
+        <div className="px-5 pb-3">
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-2">
+              <img src={levelInfo.icon} style={{ width: 24, height: 24, objectFit: "contain" }} />
+              <span className="text-xs font-bold text-white">Lv.{levelInfo.level} {levelInfo.label}</span>
+            </div>
+            {nextLevel && (
+              <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                다음: Lv.{nextLevel.level} {nextLevel.minDays}일 or {nextLevel.minVisitors}명
+              </span>
+            )}
+          </div>
+          {nextLevel && (
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
+              <div className="h-full rounded-full transition-all"
+                style={{
+                  width: `${Math.min(100, Math.max(
+                    ((space.visitDays ?? 0) / nextLevel.minDays) * 100,
+                    ((space.visitorCount ?? 0) / nextLevel.minVisitors) * 100
+                  ))}%`,
+                  background: "linear-gradient(to right, #A78BFA, #3B82F6)",
+                }}
+              />
+            </div>
+          )}
+          <div className="flex gap-3 mt-1.5">
+            <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+              📅 출석 {space.visitDays ?? 0}일
+            </span>
+            <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+              👣 방문자 {space.visitorCount ?? 0}명
+            </span>
+          </div>
         </div>
       )}
 
