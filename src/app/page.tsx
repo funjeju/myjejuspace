@@ -89,7 +89,7 @@ export default function Home() {
   const [spaces, setSpaces] = useState<Space[]>(MOCK_SPACES);
   const [showMarkers, setShowMarkers] = useState(false);
   const [pitch, setPitch] = useState(0);
-  const [sentinelVisible, setSentinelVisible] = useState(false);
+
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [layerFilter, setLayerFilter] = useState<SpaceType | "all">("all");
   const [recordSpace, setRecordSpace] = useState<Space | null>(null);
@@ -227,7 +227,7 @@ export default function Home() {
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-black">
       {!user && <LoginBanner />}
-      <Map spaces={filteredSpaces} onSpaceClick={setSelectedSpace} onMapLoad={handleMapLoad} sentinelVisible={sentinelVisible} showMarkers={showMarkers} />
+      <Map spaces={filteredSpaces} onSpaceClick={setSelectedSpace} onMapLoad={handleMapLoad} showMarkers={showMarkers} />
       <DirectionHUD map={mapInstance} spaces={filteredSpaces} userLocation={userLocation} />
 
       <TopBar
@@ -239,8 +239,6 @@ export default function Home() {
 
       <LayerToggle
         onLocate={handleLocate}
-        sentinelVisible={sentinelVisible}
-        onToggleSentinel={() => setSentinelVisible((v) => !v)}
         pitch={pitch}
         onTogglePitch={handleTogglePitch}
         showMarkers={showMarkers}

@@ -12,11 +12,10 @@ interface MapProps {
   spaces: Space[];
   onSpaceClick: (space: Space) => void;
   onMapLoad?: (map: mapboxgl.Map) => void;
-  sentinelVisible?: boolean;
   showMarkers?: boolean;
 }
 
-export default function Map({ spaces, onSpaceClick, onMapLoad, sentinelVisible = false, showMarkers = true }: MapProps) {
+export default function Map({ spaces, onSpaceClick, onMapLoad, showMarkers = true }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
@@ -97,29 +96,7 @@ export default function Map({ spaces, onSpaceClick, onMapLoad, sentinelVisible =
     }
   }, [spaces, addMarkers, showMarkers]);
 
-  // Sentinel 레이어 동적 추가/제거
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map?.loaded()) return;
-
-    if (sentinelVisible) {
-      if (!map.getSource("sentinel")) {
-        map.addSource("sentinel", {
-          type: "raster",
-          tiles: ["/api/sentinel-tiles/{z}/{x}/{y}"],
-          tileSize: 256,
-          minzoom: 9,
-          maxzoom: 16,
-        });
-      }
-      if (!map.getLayer("sentinel-layer")) {
-        map.addLayer({ id: "sentinel-layer", type: "raster", source: "sentinel", paint: { "raster-opacity": 1 } });
-      }
-    } else {
-      if (map.getLayer("sentinel-layer")) map.removeLayer("sentinel-layer");
-      if (map.getSource("sentinel")) map.removeSource("sentinel");
-    }
-  }, [sentinelVisible]);
+  // Sentinel: 비활성화 상태 — 추후 활성화
 
   return <div ref={containerRef} className="w-full h-full" />;
 }

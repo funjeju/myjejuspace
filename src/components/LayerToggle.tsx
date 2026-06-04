@@ -1,23 +1,19 @@
 "use client";
 
-import { Layers, Navigation } from "lucide-react";
+import { Navigation } from "lucide-react";
 
-// 0°=수직, 25°=살짝, 45°=드론, 65°=눈높이
 const PITCH_STEPS = [0, 25, 45, 65];
-// 버튼 내 막대 시각적 기울기 (CSS perspective용)
 const PITCH_VISUAL = [0, 25, 45, 65];
 
 interface LayerToggleProps {
   onLocate: () => void;
-  sentinelVisible: boolean;
-  onToggleSentinel: () => void;
   pitch: number;
   onTogglePitch: () => void;
   showMarkers: boolean;
   onToggleMarkers: () => void;
 }
 
-export default function LayerToggle({ onLocate, sentinelVisible, onToggleSentinel, pitch, onTogglePitch, showMarkers, onToggleMarkers }: LayerToggleProps) {
+export default function LayerToggle({ onLocate, pitch, onTogglePitch, showMarkers, onToggleMarkers }: LayerToggleProps) {
   const is3D = pitch > 0;
 
   return (
@@ -36,6 +32,7 @@ export default function LayerToggle({ onLocate, sentinelVisible, onToggleSentine
         <span className="text-sm">{showMarkers ? "📍" : "🗺️"}</span>
       </button>
 
+      {/* 현재 위치 */}
       <button
         onClick={onLocate}
         title="현재 위치"
@@ -45,24 +42,7 @@ export default function LayerToggle({ onLocate, sentinelVisible, onToggleSentine
         <Navigation size={18} color="rgba(255,255,255,0.7)" />
       </button>
 
-      {/* Sentinel-2 토글 — 추후 활성화 */}
-      {false && <button
-        onClick={onToggleSentinel}
-        title={sentinelVisible ? "Sentinel OFF" : "Sentinel ON"}
-        className="w-11 h-11 rounded-full flex flex-col items-center justify-center gap-0.5 transition-all duration-200"
-        style={{
-          background: sentinelVisible ? "rgba(34,197,94,0.25)" : "rgba(10,15,30,0.80)",
-          backdropFilter: "blur(8px)",
-          border: sentinelVisible ? "1px solid rgba(34,197,94,0.6)" : "1px solid rgba(255,255,255,0.12)",
-        }}
-      >
-        <Layers size={14} color={sentinelVisible ? "#22C55E" : "rgba(255,255,255,0.6)"} />
-        <span className="text-[8px] font-bold leading-none" style={{ color: sentinelVisible ? "#22C55E" : "rgba(255,255,255,0.4)" }}>
-          S2
-        </span>
-      </button>}
-
-      {/* Pitch toggle — 4단계 */}
+      {/* Pitch 토글 — 4단계 */}
       <button
         onClick={onTogglePitch}
         title="시점 변경"
@@ -76,9 +56,7 @@ export default function LayerToggle({ onLocate, sentinelVisible, onToggleSentine
         {PITCH_STEPS.map((step, i) => {
           const active = pitch === step;
           return (
-            <div
-              key={step}
-              className="w-5 rounded-sm transition-all duration-200"
+            <div key={step} className="w-5 rounded-sm transition-all duration-200"
               style={{
                 height: 3,
                 background: active ? "#3B82F6" : "rgba(255,255,255,0.2)",
