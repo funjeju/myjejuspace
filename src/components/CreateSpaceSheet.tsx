@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, MapPin, Loader2 } from "lucide-react";
 import { createUserSpace, getUserSpaceCount, getDistanceMeters } from "@/lib/spaces";
 import { Space } from "@/types/space";
@@ -21,13 +21,20 @@ export default function CreateSpaceSheet({ lat, lng, ownerId, spaces, onClose, o
   const [error, setError] = useState<string | null>(null);
   const [limitReached, setLimitReached] = useState(false);
   const [preValidated, setPreValidated] = useState(false);
+  // spaces는 ref로 보관 — onSnapshot 업데이트 시 effect 재실행 방지
+  const spacesRef = useRef(spaces);
+  useEffect(() => { spacesRef.current = spaces; }, [spaces]);
 
-  // 시트 열릴 때 백그라운드에서 미리 검증
+  // 시트 열릴 때 딱 1번만 검증 (lat, lng, ownerId 변경 시에만)
   useEffect(() => {
     let cancelled = false;
+    setPreValidated(false);
+    setError(null);
+    setLimitReached(false);
+
     (async () => {
       // 50m 제한 — 메모리에서 즉시 확인
-      const tooClose = spaces
+      const tooClose = spacesRef.current
         .filter((s) => s.type === "user")
         .some((s) => getDistanceMeters(lat, lng, s.coordinates.lat, s.coordinates.lng) < 50);
 
@@ -36,7 +43,7 @@ export default function CreateSpaceSheet({ lat, lng, ownerId, spaces, onClose, o
         return;
       }
 
-      // 공간 개수 제한 — Firestore 1회 쿼리 (백그라운드)
+      // 공간 개수 제한 — Firestore 1회 쿼리
       const count = await getUserSpaceCount(ownerId);
       if (!cancelled) {
         if (count >= 1) {
@@ -47,7 +54,8 @@ export default function CreateSpaceSheet({ lat, lng, ownerId, spaces, onClose, o
       }
     })();
     return () => { cancelled = true; };
-  }, [lat, lng, ownerId, spaces]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lat, lng, ownerId]); // spaces 제외 — ref로 처리
 
   const handleCreate = async () => {
     if (!name.trim()) return;

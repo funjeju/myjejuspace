@@ -77,20 +77,7 @@ export default function Map({ spaces, onSpaceClick, onMapLoad, sentinelVisible =
       });
       map.setTerrain({ source: "mapbox-dem", exaggeration: 1.5 });
 
-      // Sentinel-2 레이어 추가 (기본 숨김)
-      map.addSource("sentinel", {
-        type: "raster",
-        tiles: ["/api/sentinel-tiles/{z}/{x}/{y}"],
-        tileSize: 256,
-        minzoom: 9,
-        maxzoom: 16,
-      });
-      map.addLayer({
-        id: "sentinel-layer",
-        type: "raster",
-        source: "sentinel",
-        paint: { "raster-opacity": 0 },
-      });
+      // Sentinel-2 레이어는 활성화 시점에 동적으로 추가 (불필요한 429 방지)
 
       map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
       addMarkers(map);
@@ -110,11 +97,28 @@ export default function Map({ spaces, onSpaceClick, onMapLoad, sentinelVisible =
     }
   }, [spaces, addMarkers, showMarkers]);
 
-  // Sentinel 레이어 토글
+  // Sentinel 레이어 동적 추가/제거
   useEffect(() => {
     const map = mapRef.current;
     if (!map?.loaded()) return;
-    map.setPaintProperty("sentinel-layer", "raster-opacity", sentinelVisible ? 1 : 0);
+
+    if (sentinelVisible) {
+      if (!map.getSource("sentinel")) {
+        map.addSource("sentinel", {
+          type: "raster",
+          tiles: ["/api/sentinel-tiles/{z}/{x}/{y}"],
+          tileSize: 256,
+          minzoom: 9,
+          maxzoom: 16,
+        });
+      }
+      if (!map.getLayer("sentinel-layer")) {
+        map.addLayer({ id: "sentinel-layer", type: "raster", source: "sentinel", paint: { "raster-opacity": 1 } });
+      }
+    } else {
+      if (map.getLayer("sentinel-layer")) map.removeLayer("sentinel-layer");
+      if (map.getSource("sentinel")) map.removeSource("sentinel");
+    }
   }, [sentinelVisible]);
 
   return <div ref={containerRef} className="w-full h-full" />;
