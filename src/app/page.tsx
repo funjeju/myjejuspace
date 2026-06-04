@@ -21,6 +21,7 @@ import HallOfFame from "@/components/HallOfFame";
 import OwnerUpgradeSheet from "@/components/OwnerUpgradeSheet";
 import SearchSheet from "@/components/SearchSheet";
 import MapContextMenu from "@/components/MapContextMenu";
+import ProfileMenu from "@/components/ProfileMenu";
 import CCTVSheet from "@/components/CCTVSheet";
 import BusinessPortal from "@/components/BusinessPortal";
 import TripPlanTab from "@/components/TripPlanTab";
@@ -100,6 +101,7 @@ export default function Home() {
   const [showOwnerUpgrade, setShowOwnerUpgrade] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showCCTV, setShowCCTV] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; lat: number; lng: number } | null>(null);
   const [mapZoom, setMapZoom] = useState(9.5);
   const [notifications, setNotifications] = useState<{ id: string; message: string }[]>([]);
@@ -234,8 +236,21 @@ export default function Home() {
         nickname={user?.nickname}
         onSearchOpen={() => setShowSearch(true)}
         onCCTVOpen={() => setShowCCTV(true)}
+        onProfileClick={() => user && setShowProfileMenu((v) => !v)}
         notificationCount={notifications.length}
       />
+
+      {showProfileMenu && user && (
+        <ProfileMenu
+          nickname={user.nickname}
+          userType={user.type}
+          onClose={() => setShowProfileMenu(false)}
+          onMySpace={() => setActiveTab("myspace")}
+          onCollection={() => setActiveTab("myspace")}
+          onTripPlan={() => setActiveTab("tripplan" as Tab)}
+          onOwnerUpgrade={() => setShowOwnerUpgrade(true)}
+        />
+      )}
 
       <LayerToggle
         onLocate={handleLocate}

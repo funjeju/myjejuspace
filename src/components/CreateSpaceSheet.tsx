@@ -124,9 +124,15 @@ export default function CreateSpaceSheet({ lat, lng, ownerId, spaces, onClose, o
       {error && <p className="text-xs mb-3 text-center" style={{ color: "#EF4444" }}>{error}</p>}
 
       {limitReached ? (
-        <div className="w-full py-4 rounded-2xl text-sm text-center"
-          style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.3)", color: "#A78BFA" }}>
-          ✨ 프리미엄으로 추가 공간 생성 가능 (준비 중)
+        <div className="flex flex-col gap-2">
+          <div className="w-full py-3 px-4 rounded-2xl text-sm text-center"
+            style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#EF4444" }}>
+            이미 공간 1개를 보유 중입니다
+          </div>
+          <div className="w-full py-3 rounded-2xl text-sm text-center"
+            style={{ background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.3)", color: "#A78BFA" }}>
+            ✨ 프리미엄으로 추가 공간 생성 가능 (준비 중)
+          </div>
         </div>
       ) : (
         <button
