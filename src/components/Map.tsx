@@ -32,21 +32,31 @@ export default function Map({ spaces, onSpaceClick, onMapLoad, showMarkers = tru
       spaces.forEach((space) => {
         const el = document.createElement("div");
         el.className = "space-marker";
-        el.style.cssText = `
-          width: 36px; height: 36px;
-          border-radius: 50%;
-          background: ${SPACE_COLORS[space.type]};
-          border: 2px solid rgba(255,255,255,0.8);
-          cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 16px;
-          box-shadow: 0 0 12px ${SPACE_COLORS[space.type]}80;
-          transition: transform 0.15s ease;
-        `;
-        el.innerHTML = space.type === "official" ? "🏔️" : space.type === "business" ? "🍊" : space.type === "user" ? "✨" : "🎪";
-        el.addEventListener("mouseenter", () => (el.style.transform = "scale(1.2)"));
+        el.style.cssText = `cursor: pointer; transition: transform 0.15s ease;`;
+        el.addEventListener("mouseenter", () => (el.style.transform = "scale(1.15)"));
         el.addEventListener("mouseleave", () => (el.style.transform = "scale(1)"));
         el.addEventListener("click", () => onSpaceClick(space));
+
+        if (space.type === "user") {
+          // Lv.1 이미지 마커
+          el.style.cssText += `width: 56px; height: 56px;`;
+          const img = document.createElement("img");
+          img.src = "/icons/space-lv1.png";
+          img.style.cssText = `width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));`;
+          el.appendChild(img);
+        } else {
+          // 기존 원형 마커
+          el.style.cssText += `
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background: ${SPACE_COLORS[space.type]};
+            border: 2px solid rgba(255,255,255,0.8);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px;
+            box-shadow: 0 0 12px ${SPACE_COLORS[space.type]}80;
+          `;
+          el.innerHTML = space.type === "official" ? "🏔️" : space.type === "business" ? "🍊" : "🎪";
+        }
 
         const marker = new mapboxgl.Marker({ element: el })
           .setLngLat([space.coordinates.lng, space.coordinates.lat])
