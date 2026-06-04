@@ -88,7 +88,7 @@ export default function Home() {
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
   const [createCoords, setCreateCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [spaces, setSpaces] = useState<Space[]>(MOCK_SPACES);
-  const [showMarkers, setShowMarkers] = useState(false);
+  const [showMarkers, setShowMarkers] = useState(true);
   const [pitch, setPitch] = useState(0);
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
